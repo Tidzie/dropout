@@ -14,21 +14,23 @@ st.set_page_config(
 @st.cache_resource
 def load_assets():
     try:
-        model = joblib.load('student_dropout_model.joblib')
+        rf_model = joblib.load('student_dropout_model.joblib')
+        lr_model = joblib.load('lr_model.joblib')
+        dt_model = joblib.load('dt_model.joblib')
         scaler = joblib.load('scaler.joblib')
-        return model, scaler
+        return rf_model, lr_model, dt_model, scaler
     except:
-        return None, None
+        return None, None, None, None
 
-model, scaler = load_assets()
+rf_model, lr_model, dt_model, scaler = load_assets()
 
 # Sidebar / Header
 st.title("🎓 Great Zimbabwe University")
 st.subheader("Student Dropout Prediction Dashboard")
 st.markdown("---")
 
-if model is None:
-    st.error("Model files not found. Please run the Jupyter Notebook first to generate 'student_dropout_model.joblib' and 'scaler.joblib'.")
+if rf_model is None or lr_model is None or dt_model is None:
+    st.error("Model files not found. Please ensure all three model joblib files and scaler.joblib are generated.")
 else:
     # Form for student details
     col1, col2, col3 = st.columns(3)
@@ -50,7 +52,7 @@ else:
 
     with col3:
         st.write("### Academic & Behavioral")
-        previous_grade = st.number_input("Previous Grade (GPA)", min_value=0.0, max_value=4.0, value=2.5)
+        previous_grade_input = st.selectbox("Previous Grade", ["1", "2.1", "2.2", "3", "Fail"], index=2)
         attendance_rate = st.slider("Attendance Rate (%)", 0.0, 100.0, 80.0)
         study_hours = st.slider("Study Hours (weekly)", 0.0, 40.0, 15.0)
         lms_logins = st.number_input("LMS Logins (weekly)", min_value=0, value=5)
@@ -65,8 +67,9 @@ else:
         location_map = {"Rural": 0, "Urban": 1}
         internet_map = {"Good": 0, "Moderate": 1, "Poor": 2}
         electricity_map = {"High": 0, "Low": 1, "Medium": 2}
-        fees_map = {"Full": 0, "None": 1, "Partial": 2}
+        fees_map = {"Full": 0, "Partial": 1, "None": 2}
         job_map = {"No": 0, "Yes": 1}
+        grade_map = {"1": 0, "2.1": 1, "2.2": 2, "3": 3, "Fail": 4}
 
         # Create input dict
         input_data = {
@@ -80,7 +83,7 @@ else:
             'study_hours': study_hours,
             'attendance_rate': attendance_rate,
             'lms_logins': lms_logins,
-            'previous_grade': previous_grade,
+            'previous_grade': grade_map[previous_grade_input],
             'fees_paid': fees_map[fees_paid],
             'part_time_job': job_map[part_time_job],
             'stress_level': stress_level
@@ -97,17 +100,33 @@ else:
         scaled_input = scaler.transform(input_df)
 
         # Predict
-        prediction = model.predict(scaled_input)[0]
-        probability = model.predict_proba(scaled_input)[0][1]
+        rf_pred = rf_model.predict(scaled_input)[0]
+        rf_prob = rf_model.predict_proba(scaled_input)[0][1]
+        
+        lr_pred = lr_model.predict(scaled_input)[0]
+        lr_prob = lr_model.predict_proba(scaled_input)[0][1]
+        
+        dt_pred = dt_model.predict(scaled_input)[0]
+        dt_prob = dt_model.predict_proba(scaled_input)[0][1]
 
         # Results Display
         st.markdown("---")
-        if prediction == 1:
-            st.error(f"### Prediction: HIGH RISK OF DROPOUT")
-            st.warning(f"Probability of dropout: {probability:.2%}")
-        else:
-            st.success(f"### Prediction: STUDENT LIKELY TO CONTINUE")
-            st.info(f"Probability of dropout: {probability:.2%}")
+        st.write("### Model Comparison")
+        res_col1, res_col2, res_col3 = st.columns(3)
+        
+        def display_prediction(col, model_name, pred, prob):
+            with col:
+                st.write(f"**{model_name}**")
+                if pred == 1:
+                    st.error("HIGH RISK")
+                    st.warning(f"Probability: {prob:.2%}")
+                else:
+                    st.success("LIKELY TO CONTINUE")
+                    st.info(f"Probability: {prob:.2%}")
+
+        display_prediction(res_col1, "Random Forest", rf_pred, rf_prob)
+        display_prediction(res_col2, "Logistic Regression", lr_pred, lr_prob)
+        display_prediction(res_col3, "Decision Tree", dt_pred, dt_prob)
 
         # Metrics Visualization
         st.write("### Risk Indicators")

@@ -14,7 +14,7 @@ This project aims to address the challenge of student attrition at Great Zimbabw
 The project followed a standard machine learning pipeline:
 
 ### 2.1 Data Acquisition & Exploratory Data Analysis (EDA)
-The dataset includes 14 features ranging from demographic data (age, gender, location) to financial status (family income, fees paid) and academic performance (attendance, study hours, previous grades).
+The dataset includes 14 features ranging from demographic data (age, gender, location) to financial status (family income, fees paid) and academic performance (attendance, study hours, previous grades: 1, 2.1, 2.2, 3, and Fail).
 - **Key Finding:** There is a strong negative correlation between attendance rate and dropout status.
 - **Key Finding:** Financial factors, specifically `fees_paid` and `family_income`, are significant predictors of student stability.
 
